@@ -1,5 +1,4 @@
 from flet import *
-from alive_progress import alive_bar
 import subprocess
 
 
