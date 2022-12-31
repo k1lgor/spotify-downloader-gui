@@ -21,6 +21,7 @@ platformdirs==2.6.0
 pycryptodomex==3.16.0
 pydantic==1.10.2
 Pygments==2.13.0
+pytest
 python-slugify==6.1.2
 pytube==12.1.2
 rapidfuzz==2.13.7
