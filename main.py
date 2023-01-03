@@ -1,4 +1,23 @@
-from flet import *
+import flet
+from flet import (
+    ElevatedButton,
+    FilePicker,
+    FilePickerResultEvent,
+    Page,
+    Row,
+    Text,
+    MainAxisAlignment,
+    icons,
+    TextField,
+    Dropdown,
+    dropdown,
+    Row,
+    Text,
+    TextThemeStyle,
+    Column,
+    Container,
+    CrossAxisAlignment,
+)
 import subprocess
 
 
@@ -6,7 +25,6 @@ def main(page: Page):
     page.title = "Spotify Downloader GUI"
     page.vertical_alignment = MainAxisAlignment.CENTER
 
-    folder_name = TextField(label="Enter folder name")
     spotify_url = TextField(label="Enter Spotify URL")
     choose_dropdown = Dropdown(
         width=100,
@@ -37,26 +55,13 @@ def main(page: Page):
         )
         page.update()
 
-    def create_folder(e):
-        if not folder_name.value:
-            folder_name.error_text = "Please enter folder name"
-            page.update()
-        else:
-            name = folder_name.value
-            if os.path.exists(name):
-                folder_name.error_text = "Folder already exists"
-            else:
-                subprocess.run(f"mkdir {name}", shell=True)
-                page.add(
-                    Row(
-                        [Text(f"Folder {name} created")],
-                        alignment=MainAxisAlignment.CENTER,
-                    )
-                )
-            page.update()
-
     def choose_bitrate():
         return choose_dropdown.value
+
+    def get_directory_result(e: FilePickerResultEvent):
+        directory_path.value = e.path or "Cancelled!"
+        directory_path.update()
+        print(directory_path.value)
 
     def download(e):
         if not spotify_url.value:
@@ -65,34 +70,54 @@ def main(page: Page):
         else:
             url = spotify_url.value
             subprocess.run(
-                f"cd {folder_name.value} && spotdl --preload --bitrate {choose_bitrate()} {url}",
+                f"cd {directory_path.value} && spotdl --preload --bitrate {choose_bitrate()} {url}",
                 shell=True,
             )
+
+    get_directory_dialog = FilePicker(on_result=get_directory_result)
+    directory_path = Text()
+
+    page.overlay.extend([get_directory_dialog])
 
     page.add(
         Row(
             [
-                ElevatedButton("INSTALL", on_click=install_spotdl),
-                Text(value="Install spotdl package", text_align="center", width=150),
+                Container(
+                    Text("SPOTIFY DOWNLOADER GUI", style=TextThemeStyle.DISPLAY_MEDIUM)
+                ),
             ],
-            alignment=MainAxisAlignment.CENTER,
-        ),
-        Row(
-            [ElevatedButton("CREATE FOLDER", on_click=create_folder), folder_name],
             alignment=MainAxisAlignment.CENTER,
         ),
         Row(
             [
-                ElevatedButton("DOWNLOAD SONGS", on_click=download),
-                choose_dropdown,
-                spotify_url,
+                ElevatedButton("INSTALL SPOTDL", on_click=install_spotdl),
             ],
             alignment=MainAxisAlignment.CENTER,
+        ),
+        Row(
+            [
+                ElevatedButton(
+                    "Open directory",
+                    icon=icons.FOLDER_OPEN,
+                    on_click=lambda _: get_directory_dialog.get_directory_path(),
+                    disabled=page.web,
+                ),
+                directory_path,
+            ],
+            alignment=MainAxisAlignment.CENTER,
+        ),
+        Column(
+            [
+                Container(choose_dropdown),
+                Container(spotify_url),
+                ElevatedButton("DOWNLOAD SONGS", on_click=download),
+            ],
+            horizontal_alignment=CrossAxisAlignment.CENTER,
         ),
     )
     page.update()
 
 
-# app(target=main, view=WEB_BROWSER, port=8080)
-app(target=main)
+# flet.app(target=main, view=flet.WEB_BROWSER, port=8080)
+flet.app(target=main)
 # https://open.spotify.com/album/3MdiH74FL8mhlbnR6DcqJd?si=XjsufJmyS4OwMM9wyIaGwg
