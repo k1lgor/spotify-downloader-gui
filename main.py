@@ -42,11 +42,10 @@ def main(page: Page):
     def install_spotdl(e):
         command = subprocess.check_output(
             "pip list | grep spotdl | cut -d ' ' -f 1",
-            shell=True,
-            encoding="utf-8",
+            shell=False, encoding="utf-8",
         )
         if command != "spotdl":
-            subprocess.run("pip install spotdl -U", shell=True)
+            subprocess.run("pip install spotdl -U", shell=False)
         page.add(
             Row(
                 [Text(f"{command}", text_align="center")],
@@ -71,8 +70,7 @@ def main(page: Page):
             url = spotify_url.value
             subprocess.run(
                 f"cd {directory_path.value} && spotdl --preload --bitrate {choose_bitrate()} {url}",
-                shell=True,
-            )
+                shell=False)
 
     get_directory_dialog = FilePicker(on_result=get_directory_result)
     directory_path = Text()
