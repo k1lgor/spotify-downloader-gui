@@ -19,6 +19,7 @@ from flet import (
     CrossAxisAlignment,
 )
 import subprocess
+from security import safe_command
 
 
 def main(page: Page):
@@ -46,7 +47,7 @@ def main(page: Page):
             encoding="utf-8",
         )
         if command != "spotdl":
-            subprocess.run("pip install spotdl -U", shell=True)
+            safe_command.run(subprocess.run, "pip install spotdl -U", shell=True)
         page.add(
             Row(
                 [Text(f"{command}", text_align="center")],
@@ -69,8 +70,7 @@ def main(page: Page):
             page.update()
         else:
             url = spotify_url.value
-            subprocess.run(
-                f"cd {directory_path.value} && spotdl --preload --bitrate {choose_bitrate()} {url}",
+            safe_command.run(subprocess.run, f"cd {directory_path.value} && spotdl --preload --bitrate {choose_bitrate()} {url}",
                 shell=True,
             )
 
