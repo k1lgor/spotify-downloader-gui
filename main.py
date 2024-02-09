@@ -40,12 +40,11 @@ def main(page: Page):
     )
 
     def install_spotdl(e):
-        command = subprocess.check_output(
+        if (command := subprocess.check_output(
             "pip list | grep spotdl | cut -d ' ' -f 1",
             shell=True,
             encoding="utf-8",
-        )
-        if command != "spotdl":
+        )) != "spotdl":
             subprocess.run("pip install spotdl -U", shell=True)
         page.add(
             Row(
