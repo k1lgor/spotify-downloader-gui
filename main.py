@@ -1,123 +1,143 @@
-import flet
-from flet import (
-    ElevatedButton,
-    FilePicker,
-    FilePickerResultEvent,
-    Page,
-    Row,
-    Text,
-    MainAxisAlignment,
-    icons,
-    TextField,
-    Dropdown,
-    dropdown,
-    Row,
-    Text,
-    TextThemeStyle,
-    Column,
-    Container,
-    CrossAxisAlignment,
-)
+import os
 import subprocess
-from security import safe_command
+import sys
+
+import flet as ft
 
 
-def main(page: Page):
-    page.title = "Spotify Downloader GUI"
-    page.vertical_alignment = MainAxisAlignment.CENTER
+def check_and_install_spotdl():
+    try:
+        # Check if spotdl is installed
+        subprocess.run(
+            ["spotdl", "--version"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        # spotdl is not installed
+        return False
 
-    spotify_url = TextField(label="Enter Spotify URL")
-    choose_dropdown = Dropdown(
-        width=100,
-        label="Bitrate",
-        options=[
-            dropdown.Option("128k"),
-            dropdown.Option("160k"),
-            dropdown.Option("192k"),
-            dropdown.Option("224k"),
-            dropdown.Option("256k"),
-            dropdown.Option("320k"),
-        ],
+
+def install_spotdl():
+    # Install spotdl using pip
+    subprocess.run([sys.executable, "-m", "pip", "install", "spotdl"], check=True)
+
+
+def download_album(url, bitrate, save_dir):
+    # Ensure the save directory exists
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # Construct the spotdl command
+    command = [
+        "spotdl",
+        "--output",
+        os.path.join(save_dir),
+        "--audio",
+        "youtube",
+        "--bitrate",
+        bitrate,
+        url,
+    ]
+
+    # Run the command
+    subprocess.run(command)
+
+
+def main(page: ft.Page):
+    page.title = "Spotify Album Downloader"
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+
+    page.theme = ft.Theme(
+        color_scheme_seed="indigo",
     )
 
-    def install_spotdl(e):
-        command = subprocess.check_output(
-            "pip list | grep spotdl | cut -d ' ' -f 1",
-            shell=True,
-            encoding="utf-8",
-        )
-        if command != "spotdl":
-            safe_command.run(subprocess.run, "pip install spotdl -U", shell=True)
-        page.add(
-            Row(
-                [Text(f"{command}", text_align="center")],
-                alignment=MainAxisAlignment.CENTER,
-            )
-        )
+    page.theme_mode = ft.ThemeMode.SYSTEM
+
+    def toggle_theme(e):
+        if page.theme_mode == ft.ThemeMode.DARK:
+            page.theme_mode = ft.ThemeMode.LIGHT
+        else:
+            page.theme_mode = ft.ThemeMode.DARK
         page.update()
 
-    def choose_bitrate():
-        return choose_dropdown.value
+    theme_toggle = ft.IconButton(
+        ft.icons.LIGHT_MODE,
+        selected=False,
+        selected_icon=ft.icons.DARK_MODE,
+        on_click=toggle_theme,
+    )
 
-    def get_directory_result(e: FilePickerResultEvent):
-        directory_path.value = e.path or "Cancelled!"
-        directory_path.update()
-        print(directory_path.value)
+    page.appbar = ft.AppBar(
+        title=ft.Text("Spotify Album Downloader"),
+        center_title=True,
+        actions=[theme_toggle],
+    )
 
-    def download(e):
-        if not spotify_url.value:
-            spotify_url.error_text = "Please enter Spotify link"
+    def on_result(e):
+        save_dir_input.value = e.path or ""
+        page.update()
+
+    url_input = ft.TextField(label="Spotify Album URL", width=600)
+    bitrate_input = ft.Dropdown(
+        label="Select Bitrate",
+        width=600,
+        options=[
+            ft.dropdown.Option("128k", "128 kbps"),
+            ft.dropdown.Option("192k", "192 kbps"),
+            ft.dropdown.Option("256k", "256 kbps"),
+            ft.dropdown.Option("320k", "320 kbps"),
+        ],
+    )
+    save_dir_input = ft.TextField(
+        label="Save Directory",
+        width=600,
+        disabled=False,
+    )
+
+    file_picker = ft.FilePicker(on_result=on_result)
+
+    choose_dir_button = ft.ElevatedButton(
+        text="Choose Directory",
+        on_click=lambda e: file_picker.get_directory_path(),
+    )
+
+    def start_download(e):
+        if not check_and_install_spotdl():
+            page.snack_bar = ft.SnackBar(ft.Text("spotdl not found. Installing..."))
+            page.snack_bar.open = True
             page.update()
-        else:
-            url = spotify_url.value
-            safe_command.run(subprocess.run, f"cd {directory_path.value} && spotdl --preload --bitrate {choose_bitrate()} {url}",
-                shell=True,
+
+            install_spotdl()
+
+            page.snack_bar = ft.SnackBar(
+                ft.Text("spotdl installed successfully!"),
+                open=True,
             )
+            page.update()
 
-    get_directory_dialog = FilePicker(on_result=get_directory_result)
-    directory_path = Text()
+        download_album(
+            url_input.value,
+            bitrate_input.value,
+            save_dir_input.value,
+        )
 
-    page.overlay.extend([get_directory_dialog])
+    download_button = ft.ElevatedButton(
+        text="Download Album",
+        on_click=start_download,
+    )
 
     page.add(
-        Row(
-            [
-                Container(
-                    Text("SPOTIFY DOWNLOADER GUI", style=TextThemeStyle.DISPLAY_MEDIUM)
-                ),
-            ],
-            alignment=MainAxisAlignment.CENTER,
-        ),
-        Row(
-            [
-                ElevatedButton("INSTALL SPOTDL", on_click=install_spotdl),
-            ],
-            alignment=MainAxisAlignment.CENTER,
-        ),
-        Row(
-            [
-                ElevatedButton(
-                    "Open directory",
-                    icon=icons.FOLDER_OPEN,
-                    on_click=lambda _: get_directory_dialog.get_directory_path(),
-                    disabled=page.web,
-                ),
-                directory_path,
-            ],
-            alignment=MainAxisAlignment.CENTER,
-        ),
-        Column(
-            [
-                Container(choose_dropdown),
-                Container(spotify_url),
-                ElevatedButton("DOWNLOAD SONGS", on_click=download),
-            ],
-            horizontal_alignment=CrossAxisAlignment.CENTER,
-        ),
+        url_input,
+        bitrate_input,
+        save_dir_input,
+        choose_dir_button,
+        download_button,
+        file_picker,
     )
-    page.update()
 
 
-# flet.app(target=main, view=flet.WEB_BROWSER, port=8080)
-flet.app(target=main)
-# https://open.spotify.com/album/3MdiH74FL8mhlbnR6DcqJd?si=XjsufJmyS4OwMM9wyIaGwg
+ft.app(target=main)
